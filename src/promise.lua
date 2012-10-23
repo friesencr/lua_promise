@@ -5,6 +5,14 @@ Promise.__index = Promise
 -- server functions
 --
 
+function null_or_unpack(val)
+	if val then
+		return unpack(val)
+	else
+		return nil
+	end
+end
+
 function Promise:new()
 	local obj = {
 		is_deferred = true,
@@ -22,7 +30,7 @@ function Promise:reject(...)
 
 	for i,v in ipairs(self._callbacks) do
 		if v.event == 'always' or v.event == 'fail' then
-			v.callback(unpack(arg))
+			v.callback(null_or_unpack(arg))
 		end
 	end
 	self._callbacks = {}
@@ -35,7 +43,7 @@ function Promise:resolve(...)
 
 	for i,v in ipairs(self._callbacks) do
 		if v.event == 'always' or v.event == 'done' then
-			v.callback(unpack(arg))
+			v.callback(null_or_unpack(arg))
 		end
 	end
 	self._callbacks = {}
@@ -45,7 +53,7 @@ function Promise:notify(...)
 	assert(self:state() == 'pending')
 	for i,v in ipairs(self._callbacks) do
 		if v.event == 'progress' then
-			v.callback(unpack(arg))
+			v.callback(null_or_unpack(arg))
 		end
 	end
 end
@@ -57,7 +65,7 @@ end
 
 function Promise:always(callback)
 	if self:state() ~= 'pending' then
-		callback(unpack(self._value))
+		callback(null_or_unpack(self._value))
 	else
 		table.insert(self._callbacks, { event = 'always', callback = callback })
 	end
@@ -66,7 +74,7 @@ end
 
 function Promise:done(callback)
 	if self:state() == 'resolved' then
-		callback(unpack(self._value))
+		callback(null_or_unpack(self._value))
 	elseif self:state() == 'pending' then
 		table.insert(self._callbacks, { event = 'done', callback = callback })
 	end
@@ -75,7 +83,7 @@ end
 
 function Promise:fail(callback)
 	if self:state() == 'rejected' then
-		callback(unpack(self._value))
+		callback(null_or_unpack(self._value))
 	elseif self:state() == 'pending' then
 		table.insert(self._callbacks, { event = 'fail', callback = callback })
 	end
@@ -115,9 +123,9 @@ function when(...)
 				returns[i] = val
 				if completed == total then
 					if failed > 0 then
-						deferred:reject(unpack(returns))
+						deferred:reject(null_or_unpack(returns))
 					else
-						deferred:resolve(unpack(returns))
+						deferred:resolve(null_or_unpack(returns))
 					end
 				end
 			end)
