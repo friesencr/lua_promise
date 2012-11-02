@@ -5,7 +5,7 @@ Promise.__index = Promise
 -- server functions
 --
 
-function null_or_unpack(val)
+local function null_or_unpack(val)
 	if val then
 		return unpack(val)
 	else
@@ -24,6 +24,7 @@ function Promise:new()
 end
 
 function Promise:reject(...)
+	local arg = {...}
 	assert(self:state() == 'pending')
 	self._value = arg
 	self._state = 'rejected'
@@ -37,6 +38,7 @@ function Promise:reject(...)
 end
 
 function Promise:resolve(...)
+	local arg = {...}
 	assert(self:state() == 'pending')
 	self._value = arg
 	self._state = 'resolved'
@@ -50,6 +52,7 @@ function Promise:resolve(...)
 end
 
 function Promise:notify(...)
+	local arg = {...}
 	assert(self:state() == 'pending')
 	for i,v in ipairs(self._callbacks) do
 		if v.event == 'progress' then
@@ -107,6 +110,7 @@ function Promise:state()
 end
 
 function when(...)
+	local arg = {...}
 	local deferred = Promise:new()
 	local returns = {}
 	local total = # arg
