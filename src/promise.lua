@@ -1,10 +1,3 @@
-Promise = {}
-Promise.__index = Promise
-
---
--- server functions
---
-
 local function null_or_unpack(val)
 	if val then
 		return unpack(val)
@@ -13,101 +6,112 @@ local function null_or_unpack(val)
 	end
 end
 
+Promise = {
+
+	--
+	-- server functions
+	--
+
+	reject = function(self, ...)
+		local arg = {...}
+		assert(self:state() == 'pending')
+		self._value = arg
+		self._state = 'rejected'
+
+		for i,v in ipairs(self._callbacks) do
+			if v.event == 'always' or v.event == 'fail' then
+				v.callback(null_or_unpack(arg))
+			end
+		end
+		self._callbacks = {}
+	end
+
+	, resolve = function(self, ...)
+		local arg = {...}
+		assert(self:state() == 'pending')
+		self._value = arg
+		self._state = 'resolved'
+
+		for i,v in ipairs(self._callbacks) do
+			if v.event == 'always' or v.event == 'done' then
+				v.callback(null_or_unpack(arg))
+			end
+		end
+		self._callbacks = {}
+	end
+
+	, notify = function(self, ...)
+		local arg = {...}
+		assert(self:state() == 'pending')
+		for i,v in ipairs(self._callbacks) do
+			if v.event == 'progress' then
+				v.callback(null_or_unpack(arg))
+			end
+		end
+	end
+
+
+	--
+	-- client function
+	--
+
+	, always = function(self, callback)
+		if self:state() ~= 'pending' then
+			callback(null_or_unpack(self._value))
+		else
+			table.insert(self._callbacks, { event = 'always', callback = callback })
+		end
+		return self
+	end
+
+	, done = function(self, callback)
+		if self:state() == 'resolved' then
+			callback(null_or_unpack(self._value))
+		elseif self:state() == 'pending' then
+			table.insert(self._callbacks, { event = 'done', callback = callback })
+		end
+		return self
+	end
+
+	, fail = function(self, callback)
+		if self:state() == 'rejected' then
+			callback(null_or_unpack(self._value))
+		elseif self:state() == 'pending' then
+			table.insert(self._callbacks, { event = 'fail', callback = callback })
+		end
+		return self
+	end
+
+	, progress = function(self, callback)
+		if self:state() == 'pending' then
+			table.insert(self._callbacks, { event = 'progress', callback = callback })
+		end
+		return self
+	end
+
+
+	--
+	-- utility functions
+	--
+
+	, state = function(self)
+		return self._state
+	end
+
+}
+
 function Promise:new()
 	local obj = {
 		is_deferred = true,
 		_state = 'pending',
 		_callbacks = {}
 	}
-	setmetatable(obj, Promise)
+	for k,v in pairs(Promise) do obj[k] = v end
+	obj.new = nil
 	return obj
 end
 
-function Promise:reject(...)
-	local arg = {...}
-	assert(self:state() == 'pending')
-	self._value = arg
-	self._state = 'rejected'
-
-	for i,v in ipairs(self._callbacks) do
-		if v.event == 'always' or v.event == 'fail' then
-			v.callback(null_or_unpack(arg))
-		end
-	end
-	self._callbacks = {}
-end
-
-function Promise:resolve(...)
-	local arg = {...}
-	assert(self:state() == 'pending')
-	self._value = arg
-	self._state = 'resolved'
-
-	for i,v in ipairs(self._callbacks) do
-		if v.event == 'always' or v.event == 'done' then
-			v.callback(null_or_unpack(arg))
-		end
-	end
-	self._callbacks = {}
-end
-
-function Promise:notify(...)
-	local arg = {...}
-	assert(self:state() == 'pending')
-	for i,v in ipairs(self._callbacks) do
-		if v.event == 'progress' then
-			v.callback(null_or_unpack(arg))
-		end
-	end
-end
-
-
---
--- client function
---
-
-function Promise:always(callback)
-	if self:state() ~= 'pending' then
-		callback(null_or_unpack(self._value))
-	else
-		table.insert(self._callbacks, { event = 'always', callback = callback })
-	end
-	return self
-end
-
-function Promise:done(callback)
-	if self:state() == 'resolved' then
-		callback(null_or_unpack(self._value))
-	elseif self:state() == 'pending' then
-		table.insert(self._callbacks, { event = 'done', callback = callback })
-	end
-	return self
-end
-
-function Promise:fail(callback)
-	if self:state() == 'rejected' then
-		callback(null_or_unpack(self._value))
-	elseif self:state() == 'pending' then
-		table.insert(self._callbacks, { event = 'fail', callback = callback })
-	end
-	return self
-end
-
-function Promise:progress(callback)
-	if self:state() == 'pending' then
-		table.insert(self._callbacks, { event = 'progress', callback = callback })
-	end
-	return self
-end
-
-
---
--- utility functions
---
-
-function Promise:state()
-	return self._state
-end
+setmetatable(Promise, { __call = function(x, ...) return Promise:new(...) end })
 
 function when(...)
 	local arg = {...}
