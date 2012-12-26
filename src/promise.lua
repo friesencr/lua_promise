@@ -129,17 +129,18 @@ function when(...)
 				end
 				completed = completed + 1
 				returns[i] = val
-				if completed == total then
-					if failed > 0 then
-						deferred:reject(null_or_unpack(returns))
-					else
-						deferred:resolve(null_or_unpack(returns))
-					end
-				end
+
 			end)
 		else
 			returns[i] = v
 			completed = completed + 1
+		end
+		if completed == total then
+			if failed > 0 then
+				deferred:reject(null_or_unpack(returns))
+			else
+				deferred:resolve(null_or_unpack(returns))
+			end
 		end
 	end
 	return deferred
