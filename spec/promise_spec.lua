@@ -191,7 +191,7 @@ describe("when", function()
 		assert.truthy(promise.progress)
 	end)
 
-	it("resolves when all promieses are met", function()
+	it("resolves when all promises are met", function()
 
 		local p1 = Promise:new()
 		local p2 = Promise:new()
