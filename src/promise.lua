@@ -120,6 +120,15 @@ function when(...)
 	local total = # arg
 	local completed = 0
 	local failed = 0
+    check = function()
+        if completed == total then
+            if failed > 0 then
+                deferred:reject(null_or_unpack(returns))
+            else
+                deferred:resolve(null_or_unpack(returns))
+            end
+        end
+    end
 	for i,v in ipairs(arg) do
 		if (v and type(v) == 'table' and v.is_deferred) then
 			local promise = v
@@ -129,19 +138,13 @@ function when(...)
 				end
 				completed = completed + 1
 				returns[i] = val
-
+                check()
 			end)
 		else
 			returns[i] = v
 			completed = completed + 1
 		end
-		if completed == total then
-			if failed > 0 then
-				deferred:reject(null_or_unpack(returns))
-			else
-				deferred:resolve(null_or_unpack(returns))
-			end
-		end
+        check()
 	end
 	return deferred
 end
